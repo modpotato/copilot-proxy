@@ -140,6 +140,20 @@ Use `uv run pytest` (once tests are added) or `uvx ruff check .` for linting.
 
 Both `uv publish` commands expect the relevant API token to be available in the `UV_PUBLISH_TOKEN` environment variable.
 
+### GitHub Actions trusted publisher
+
+This repository includes `.github/workflows/publish.yml`, which builds and uploads releases automatically on GitHub tag releases. To enable it:
+
+1. Create a PyPI trusted publisher (pending or project-specific) pointing at:
+   - **Project**: `copilot-proxy`
+   - **Owner**: `modpotato`
+   - **Repository**: `copilot-proxy`
+   - **Workflow**: `publish.yml`
+   - **Environment**: `release`
+2. In GitHub, create the matching repository environment (`Settings → Environments → New environment → release`).
+3. Push a tag (e.g. `v0.1.0`) to GitHub (`git push origin v0.1.0`). The workflow will build with `uv`, publish to PyPI via OIDC, and create the GitHub release automatically.
+4. For dry runs, use the **Run workflow** button; the manual dispatch builds and validates without publishing or creating a release.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
