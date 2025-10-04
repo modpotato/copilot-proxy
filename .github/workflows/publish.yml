@@ -1,4 +1,3 @@
-on:
 name: Publish to PyPI
 
 on:
