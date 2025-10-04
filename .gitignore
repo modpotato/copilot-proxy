@@ -21,3 +21,6 @@ qwen-proxy-venv/
 # OS files
 .DS_Store
 Thumbs.db
+
+
+copilot_proxy.egg-info/
