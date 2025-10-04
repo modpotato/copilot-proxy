@@ -16,40 +16,36 @@ flowchart TD
 
 ### Prerequisites
 
-1. **Python 3.12+**: Required to run the proxy server
-2. **UV**: This project uses [UV](https://docs.astral.sh/uv/) for fast dependency management
-3. **Backend Access**: Access to the GLM coding plan backend (configuration details will be provided separately)
+1. **Python 3.10+**
+2. **UV** for dependency management and packaging ([install instructions](https://docs.astral.sh/uv/getting-started/installation/))
+3. **Z.AI Coding Plan access** with a valid API key
 
-### Installation
+### Install from PyPI (recommended)
 
-1. **Install UV** (if not already installed):
-   ```bash
-   # On Windows (PowerShell)
-   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-   
-   # On macOS/Linux
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   ```
+```powershell
+# Ensure uv is installed first
+uv pip install copilot-proxy
 
-2. **Install dependencies:**
-   ```bash
-   uv sync
-   ```
-   
-   UV will automatically create a virtual environment and install all dependencies defined in `pyproject.toml`.
+# Or run without installing globally
+uvx copilot-proxy --help
+```
 
-### Running the Proxy
+### Run the proxy locally
 
-1. **Start the proxy server:**
-   ```bash
-   uv run python proxy_server.py
-   ```
+```powershell
+# Quick one-liner using uvx
+uvx copilot-proxy --host 127.0.0.1 --port 11434
 
-2. **The server will start on `http://localhost:11434`** (same port as Ollama). 
-   
-   **Important:** Make sure Ollama is not running, as both services use port 11434. Running both simultaneously will cause a port conflict.
+# Or inside a synced project environment
+uv sync
+uv run copilot-proxy
+```
 
-3. **Provide your Z.AI API key:**
+The server listens on `http://localhost:11434` by default (same port Ollama uses). Make sure Ollama itself is stopped to avoid port conflicts.
+
+### Configure credentials
+
+Provide your Z.AI API key before launching the proxy:
    ```powershell
    # PowerShell (current session only)
    $env:ZAI_API_KEY = "your-zai-api-key"
@@ -62,7 +58,8 @@ flowchart TD
 
    You can optionally set a custom endpoint with `ZAI_API_BASE_URL`, though the default already targets the Coding Plan URL `https://api.z.ai/api/coding/paas/v4`.
 
-4. **Configure GitHub Copilot in VS Code:**
+### Configure GitHub Copilot in VS Code
+
    - Open the GitHub Copilot Chat panel in VS Code
    - Click on the current model name to view available models
    - Click **'Manage Models...'**
@@ -105,10 +102,43 @@ The proxy server implements the Ollama API specification, allowing GitHub Copilo
    - Make sure you've selected 'Ollama' as the provider in Copilot settings
    - Check that the proxy server is responding at `http://localhost:11434`
 
-**Platform Notes:**
+## Developing locally
 
-- **Windows**: The project uses standard asyncio. All features work normally on Windows.
-- **Unix/Linux/Mac**: The project can optionally use `uvloop` for improved performance on these platforms.
+```powershell
+uv sync
+uv run uvicorn copilot_proxy.app:app --reload --port 11434
+```
+
+Use `uv run pytest` (once tests are added) or `uvx ruff check .` for linting.
+
+## Releasing to PyPI with UV
+
+1. Bump the version in `pyproject.toml`.
+2. Build the distributions:
+
+   ```powershell
+   uv build
+   ```
+
+3. Check the metadata:
+
+   ```powershell
+   uvx twine check dist/*
+   ```
+
+4. Publish to TestPyPI (recommended before production):
+
+   ```powershell
+   uv publish --repository testpypi
+   ```
+
+5. Publish to PyPI:
+
+   ```powershell
+   uv publish
+   ```
+
+Both `uv publish` commands expect the relevant API token to be available in the `UV_PUBLISH_TOKEN` environment variable.
 
 ## License
 

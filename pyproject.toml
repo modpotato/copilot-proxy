@@ -1,16 +1,45 @@
 [project]
 name = "copilot-proxy"
 version = "0.1.0"
-description = "Add your description here"
+description = "GitHub Copilot-compatible proxy for Z.AI GLM coding models"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "modpotato" }]
+keywords = ["copilot", "proxy", "fastapi", "glm", "ollama"]
+classifiers = [
+	"Development Status :: 4 - Beta",
+	"Framework :: FastAPI",
+	"Intended Audience :: Developers",
+	"Operating System :: OS Independent",
+	"Programming Language :: Python",
+	"Programming Language :: Python :: 3",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: Python :: 3.12",
+	"Topic :: Internet :: Proxy Servers",
+]
 dependencies = [
-	"fastapi>=0.68.0",
-	"httpx>=0.23.0",
-	"uvicorn[standard]>=0.15.0",
+	"fastapi>=0.110",
+	"httpx>=0.27",
+	"uvicorn[standard]>=0.27",
 	"openai>=1.0.0",
 ]
+
+[project.scripts]
+copilot-proxy = "copilot_proxy.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/modpotato/copilot-proxy"
+Repository = "https://github.com/modpotato/copilot-proxy"
+Issues = "https://github.com/modpotato/copilot-proxy/issues"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["copilot_proxy"]
+
+[tool.uv]
+managed = true
