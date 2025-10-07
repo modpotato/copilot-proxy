@@ -9,7 +9,7 @@ import uvicorn
 
 from .config import (
     get_api_key, set_api_key, get_base_url, set_base_url, get_config_file,
-    is_first_run
+    is_first_run, ensure_complete_config
 )
 
 DEFAULT_HOST = "127.0.0.1"
@@ -47,6 +47,9 @@ def interactive_setup(is_first: bool = True) -> None:
     if base_url:
         set_base_url(base_url)
         print("✅ Custom base URL saved!")
+
+    # Ensure all default values are saved to config
+    ensure_complete_config()
 
     # Show config location
     config_path = get_config_file()

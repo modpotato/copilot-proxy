@@ -105,3 +105,30 @@ def set_base_url(base_url: str) -> None:
     config = load_config()
     config["base_url"] = base_url.strip()
     save_config(config)
+
+
+def ensure_complete_config() -> None:
+    """Ensure all configuration values exist in config, including defaults."""
+    if not CONFIG_FILE.exists():
+        return
+
+    config = load_config()
+    updated = False
+
+    # Ensure base_url exists (save default if not set)
+    if "base_url" not in config:
+        config["base_url"] = "https://api.z.ai/api/coding/paas/v4"
+        updated = True
+
+    # Ensure default host exists
+    if "default_host" not in config:
+        config["default_host"] = "127.0.0.1"
+        updated = True
+
+    # Ensure default port exists
+    if "default_port" not in config:
+        config["default_port"] = 11434
+        updated = True
+
+    if updated:
+        save_config(config)
