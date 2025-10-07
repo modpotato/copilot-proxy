@@ -9,6 +9,8 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 
+from .config import get_api_key as get_config_api_key, get_base_url as get_config_base_url
+
 DEFAULT_BASE_URL = "https://api.z.ai/api/coding/paas/v4"
 DEFAULT_MODEL = "GLM-4.6"
 API_KEY_ENV_VARS = ("ZAI_API_KEY", "ZAI_CODING_API_KEY", "GLM_API_KEY")
@@ -62,20 +64,34 @@ MODEL_CATALOG = [
 
 
 def _get_api_key() -> str:
+    # First try to get API key from config file
+    config_api_key = get_config_api_key()
+    if config_api_key:
+        return config_api_key
+
+    # Fall back to environment variables
     for env_var in API_KEY_ENV_VARS:
         api_key = os.getenv(env_var)
         if api_key:
             return api_key.strip()
+
     raise RuntimeError(
-        "Missing Z.AI API key. Please set one of the following environment variables: "
-        + ", ".join(API_KEY_ENV_VARS)
+        "Missing Z.AI API key. Please set it using 'copilot-proxy config set-api-key <key>' "
+        f"or set one of the following environment variables: {', '.join(API_KEY_ENV_VARS)}"
     )
 
 
 def _get_base_url() -> str:
-    base_url = os.getenv(BASE_URL_ENV_VAR, DEFAULT_BASE_URL).strip()
-    if not base_url:
-        base_url = DEFAULT_BASE_URL
+    # First try to get base URL from config file
+    config_base_url = get_config_base_url()
+    if config_base_url:
+        base_url = config_base_url
+    else:
+        # Fall back to environment variable or default
+        base_url = os.getenv(BASE_URL_ENV_VAR, DEFAULT_BASE_URL).strip()
+        if not base_url:
+            base_url = DEFAULT_BASE_URL
+
     if not base_url.startswith("http://") and not base_url.startswith("https://"):
         base_url = f"https://{base_url}"
     return base_url.rstrip("/")

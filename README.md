@@ -45,7 +45,16 @@ The server listens on `http://localhost:11434` by default (same port Ollama uses
 
 ### Configure credentials
 
-Provide your Z.AI API key before launching the proxy:
+**New users (recommended):**
+```powershell
+# Interactive setup - runs automatically on first use
+copilot-proxy
+
+# Or manually run setup wizard
+copilot-proxy config setup
+```
+
+**Advanced users - Environment variables:**
    ```powershell
    # PowerShell (current session only)
    $env:ZAI_API_KEY = "your-zai-api-key"
@@ -57,6 +66,26 @@ Provide your Z.AI API key before launching the proxy:
    ```
 
    You can optionally set a custom endpoint with `ZAI_API_BASE_URL`, though the default already targets the Coding Plan URL `https://api.z.ai/api/coding/paas/v4`.
+
+**Configuration Management:**
+```powershell
+# Set API key in persistent config
+copilot-proxy config set-api-key your-zai-api-key
+
+# View current configuration
+copilot-proxy config get-api-key
+
+# Set custom base URL
+copilot-proxy config set-base-url https://your-custom-endpoint.com
+
+# Show config file location
+copilot-proxy config show-path
+
+# Start proxy (uses saved config automatically)
+copilot-proxy serve
+```
+
+**Priority Order:** Config file > Environment variables > Default values
 
 ### Configure GitHub Copilot in VS Code
 
