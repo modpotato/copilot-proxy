@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from datetime import datetime
+from typing import AsyncGenerator, List, Dict, Any
 
 import httpx
 from fastapi import FastAPI, Request
@@ -22,31 +23,102 @@ DEFAULT_MODEL = "GLM-4.7"
 API_KEY_ENV_VARS = ("ZAI_API_KEY", "ZAI_CODING_API_KEY", "GLM_API_KEY")
 BASE_URL_ENV_VAR = "ZAI_API_BASE_URL"
 CHAT_COMPLETION_PATH = "/chat/completions"
+MODELS_PATH = "/models"
 
-def get_model_catalog():
-    """Generate the model catalog dynamically based on config."""
-    context_length = get_context_length()
+# Dynamic model catalog - populated on startup
+_dynamic_model_catalog: List[Dict[str, Any]] = []
+
+
+def _convert_api_model_to_ollama_format(api_model: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert a model from the Z.AI /models response to Ollama format."""
+    model_id = api_model.get("id", "unknown")
+    created = api_model.get("created", 0)
+    
+    # Convert Unix timestamp to ISO format
+    try:
+        modified_at = datetime.utcfromtimestamp(created).isoformat() + "Z"
+    except (ValueError, OSError):
+        modified_at = "2024-01-01T00:00:00Z"
+    
+    return {
+        "name": model_id,
+        "model": model_id,
+        "modified_at": modified_at,
+        "size": 0,
+        "digest": model_id,
+        "details": {
+            "format": "glm",
+            "family": "glm",
+            "families": ["glm"],
+            "parameter_size": "cloud",
+            "quantization_level": "cloud",
+        },
+    }
+
+
+async def fetch_available_models() -> List[Dict[str, Any]]:
+    """Fetch the list of available models from the Z.AI API."""
+    global _dynamic_model_catalog
+    
+    try:
+        api_key = _get_api_key()
+        base_url = _get_base_url()
+        models_url = f"{base_url}{MODELS_PATH}"
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(models_url, headers=headers)
+            response.raise_for_status()
+            
+            data = response.json()
+            api_models = data.get("data", [])
+            
+            # Convert to Ollama format
+            _dynamic_model_catalog = [
+                _convert_api_model_to_ollama_format(m) for m in api_models
+            ]
+            
+            return _dynamic_model_catalog
+            
+    except Exception as exc:
+        print(f"Warning: Failed to fetch models from API: {exc}")
+        print("Falling back to default model only.")
+        # Fallback to just the default model
+        _dynamic_model_catalog = [
+            {
+                "name": DEFAULT_MODEL,
+                "model": DEFAULT_MODEL,
+                "modified_at": "2024-01-01T00:00:00Z",
+                "size": 0,
+                "digest": DEFAULT_MODEL,
+                "details": {
+                    "format": "glm",
+                    "family": "glm",
+                    "families": ["glm"],
+                    "parameter_size": "cloud",
+                    "quantization_level": "cloud",
+                },
+            }
+        ]
+        return _dynamic_model_catalog
+
+
+def get_model_catalog() -> List[Dict[str, Any]]:
+    """Get the current model catalog (dynamically loaded or fallback)."""
+    if _dynamic_model_catalog:
+        return _dynamic_model_catalog
+    # Return a minimal fallback if not yet loaded
     return [
         {
-            "name": "GLM-4.7",
-            "model": "GLM-4.7",
-            "modified_at": "2025-12-21T00:00:00Z",
-            "size": 0,
-            "digest": "GLM-4.7",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
-        {
-            "name": "GLM-4-Plus",
-            "model": "GLM-4-Plus",
+            "name": DEFAULT_MODEL,
+            "model": DEFAULT_MODEL,
             "modified_at": "2024-01-01T00:00:00Z",
             "size": 0,
-            "digest": "GLM-4-Plus",
+            "digest": DEFAULT_MODEL,
             "details": {
                 "format": "glm",
                 "family": "glm",
@@ -54,165 +126,8 @@ def get_model_catalog():
                 "parameter_size": "cloud",
                 "quantization_level": "cloud",
             },
-        },
-        {
-            "name": "GLM-4.6",
-            "model": "GLM-4.6",
-            "modified_at": "2024-01-01T00:00:00Z",
-            "size": 0,
-            "digest": "GLM-4.6",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
-        {
-            "name": "GLM-4.5",
-            "model": "GLM-4.5",
-            "modified_at": "2024-01-01T00:00:00Z",
-            "size": 0,
-            "digest": "GLM-4.5",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
-        {
-            "name": "GLM-4.5-Air",
-            "model": "GLM-4.5-Air",
-            "modified_at": "2024-01-01T00:00:00Z",
-            "size": 0,
-            "digest": "GLM-4.5-Air",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
-        {
-            "name": "GLM-4.5-AirX",
-            "model": "GLM-4.5-AirX",
-            "modified_at": "2024-01-01T00:00:00Z",
-            "size": 0,
-            "digest": "GLM-4.5-AirX",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
-        {
-            "name": "GLM-4.5-Flash",
-            "model": "GLM-4.5-Flash",
-            "modified_at": "2024-01-01T00:00:00Z",
-            "size": 0,
-            "digest": "GLM-4.5-Flash",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
-        {
-            "name": "GLM-4.6V",
-            "model": "GLM-4.6V",
-            "modified_at": "2024-01-01T00:00:00Z",
-            "size": 0,
-            "digest": "GLM-4.6V",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
-        {
-            "name": "GLM-4.6V-Flash",
-            "model": "GLM-4.6V-Flash",
-            "modified_at": "2024-01-01T00:00:00Z",
-            "size": 0,
-            "digest": "GLM-4.6V-Flash",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
-        {
-            "name": "GLM-4.6V-FlashX",
-            "model": "GLM-4.6V-FlashX",
-            "modified_at": "2024-01-01T00:00:00Z",
-            "size": 0,
-            "digest": "GLM-4.6V-FlashX",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
-        {
-            "name": "GLM-4.5V",
-            "model": "GLM-4.5V",
-            "modified_at": "2024-01-01T00:00:00Z",
-            "size": 0,
-            "digest": "GLM-4.5V",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
-        {
-            "name": "AutoGLM-Phone-Multilingual",
-            "model": "AutoGLM-Phone-Multilingual",
-            "modified_at": "2024-01-01T00:00:00Z",
-            "size": 0,
-            "digest": "AutoGLM-Phone-Multilingual",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
-        {
-            "name": "GLM-4-32B-0414-128K",
-            "model": "GLM-4-32B-0414-128K",
-            "modified_at": "2024-01-01T00:00:00Z",
-            "size": 0,
-            "digest": "GLM-4-32B-0414-128K",
-            "details": {
-                "format": "glm",
-                "family": "glm",
-                "families": ["glm"],
-                "parameter_size": "cloud",
-                "quantization_level": "cloud",
-            },
-        },
+        }
     ]
-
-
-MODEL_CATALOG = get_model_catalog()
 
 
 def _get_api_key() -> str:
@@ -262,6 +177,10 @@ async def _lifespan(app: FastAPI):  # noqa: D401 - FastAPI lifespan signature
 
     try:
         _ = _get_api_key()
+        # Fetch available models dynamically from the API
+        models = await fetch_available_models()
+        model_names = [m["name"] for m in models]
+        print(f"Loaded {len(models)} models from API: {', '.join(model_names)}")
         print("GLM Coding Plan proxy is ready.")
     except Exception as exc:  # pragma: no cover - startup logging
         print(f"Failed to initialise GLM Coding Plan proxy: {exc}")
@@ -395,7 +314,8 @@ __all__ = [
     "CHAT_COMPLETION_PATH",
     "DEFAULT_BASE_URL",
     "DEFAULT_MODEL",
-    "MODEL_CATALOG",
     "app",
     "create_app",
+    "fetch_available_models",
+    "get_model_catalog",
 ]
