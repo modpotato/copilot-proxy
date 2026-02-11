@@ -34,7 +34,7 @@ uvx copilot-proxy --help
 
 ```powershell
 # Quick one-liner using uvx
-uvx copilot-proxy --host 127.0.0.1 --port 11434
+uvx copilot-proxy serve --host 127.0.0.1 --port 11434
 
 # Or inside a synced project environment
 uv sync
